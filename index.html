@@ -377,7 +377,7 @@ img.pxi,#dlg img.pxi,.tool img.pxi,.card img.pxi,.chip img.pxi,.frow img.pxi,.lo
 </div>
 <script>
 'use strict';
-const VERSION='v1.11c';const DAY_RATE=1/1.5; // days last 1.5x longer (v1.09c)
+const VERSION='v1.11d';const DAY_RATE=1/1.5; // days last 1.5x longer (v1.09c)
 document.addEventListener('DOMContentLoaded',()=>{const v=document.getElementById('verTag');if(v)v.textContent=VERSION;});
 // ================= CONSTANTS & HELPERS =================
 const T=8,W=60,H=60,WPX=W*T,HPX=H*T;
@@ -978,7 +978,7 @@ function firstAnchor(t){for(let i=0;i<W*H;i++)if(S.objs[i]===t)return i;return -
 function affected(cx,cy,r){const out=[];for(let i=0;i<W*H;i++){const t=objT(i);if(!t||OBJ[t].cat==='deco')continue;const[ox,oy]=objCenter(i);if(Math.hypot(ox-cx,oy-cy)<=r*T)out.push(i);}return out;}
 function colVibe(){return colVibe0()+(S.pens?penVibe()*.12:0);}
 function colVibe0(){const sp=arenas.flatMap(a=>a.spots);const pts=sp.length?sp.map(p=>p.i):[...targets.food.keys(),...targets.show.keys()];if(!pts.length)return 0;return pts.reduce((a,i)=>a+beauty[i],0)/pts.length;}
-const willBase=()=>Math.round((6+colVibe()*2.2+S.fame*.04)*locMul());
+const willBase=()=>Math.round((6+colVibe()*2.2+S.fame*.1)*locMul());
 function blockWall(bx,by){const i=idx(bx*2,by*2),g=[S.ground[i],S.ground[i+1],S.ground[i+W],S.ground[i+W+1]];return g.includes(WA)&&!g.includes(GA);}
 function onRoad(x,y){const M=plotMask(plotLv(S));if(y<=M.gy||y>=H)return false;return S.ground[idx(x,M.gy)]===GA||S.ground[idx(x^1,M.gy)]===GA;}
 function walkV(x,y){if(!inb(x,y))return false;const i=idx(x,y),g=S.ground[i];if(g===WA||g===SA)return false;if(g===GR)return onRoad(x,y);if(blockWall(x>>1,y>>1))return false;const t=typeAt(i);return !t||!!OBJ[t].walk;}
@@ -1211,7 +1211,7 @@ const fansOf=id=>visitors.filter(v=>v.fav===id&&v.state!=='rampage');
 function spawnVisitor(asRec){
   const p=PLOTS[plotLv(S)];const sy=Math.min(H-2,p.y1+2),sx=exitGoal()[0]-ri(0,1);const will=Math.max(3,Math.round(willBase()*rnd(.85,1.3)));
   const v={kind:'v',id:uid++,name:pick(VNAMES),x:sx*T+4,y:sy*T+6,will,ox:rnd(-1.5,1.5),oy:rnd(-1,1),path:[],dir:1,state:'enter',timer:0,
-    hunger:rnd(10,50),fun:rnd(40,80),mood:clamp(64-Math.max(0,S.ticket-6)*3,8,90),stay:rnd(70,150),chat:rnd(2,9),bubble:null,spot:-1,
+    hunger:rnd(10,50),fun:rnd(40,80),mood:clamp(64-Math.max(0,S.ticket/tkScale()-6)*3,8,90),stay:rnd(70,150),chat:rnd(2,9),bubble:null,spot:-1,
     look:npcLook(),walkT:0,mvT:0};
   if(asRec){Object.assign(v,{name:asRec.name,trait:asRec.trait,look:{type:'human',pal:asRec.pal,hat:true},fav:asRec.fid,superfan:true,sfid:asRec.sid,stay:1e9,hp:30,ops:{}});S.roster.forEach(f=>v.ops[f.id]=+rnd(-.2,.5).toFixed(2));v.ops[asRec.fid]=1;v.purse=140+S.fame;}else{initFan(v);applyRegular(v);}v.path=findPath(sx,sy,(x,y)=>S.ground[idx(x,y)]===GA,walkV)||[];
   visitors.push(v);return v;
@@ -1294,7 +1294,7 @@ function updVisitor(v,dt){
   if(v.mvT>0)v.mvT-=dt;
   if(v.bubble){v.bubble.t-=dt;if(v.bubble.t<=0)v.bubble=null;}
   if(v.state!=='enter'&&v.state!=='leave'){v.stay-=dt;const[tx,ty]=tileOf(v);
-    const tgt=44+Math.min(32,beauty[idx(tx,ty)]*6)-(v.hunger>80?22:0)-(v.fun<15?12:0)-(v.trait==='Snob'&&beauty[idx(tx,ty)]<1?10:0)-Math.max(0,S.ticket-10)*1.5-Math.min(9,Math.max(0,decals.length-40)/25)-(S.dmg?Math.min(6,Object.keys(S.dmg).length*1.5):0);v.mood+=(tgt-v.mood)*dt*.025;v.mood=clamp(v.mood,0,100);}
+    const tgt=44+Math.min(32,beauty[idx(tx,ty)]*6)-(v.hunger>80?22:0)-(v.fun<15?12:0)-(v.trait==='Snob'&&beauty[idx(tx,ty)]<1?10:0)-Math.max(0,S.ticket/tkScale()-10)*1.5-Math.min(9,Math.max(0,decals.length-40)/25)-(S.dmg?Math.min(6,Object.keys(S.dmg).length*1.5):0);v.mood+=(tgt-v.mood)*dt*.025;v.mood=clamp(v.mood,0,100);}
   v.chat-=dt;
   if(v.chat<=0){const live=(v.state==='watch'||v.state==='goWatch')&&bouts.some(b=>b.id===v.watchB&&b.phase==='fight');const cm=CFG.chatter==='low'?2.2:CFG.chatter==='vlow'?6:CFG.chatter==='off'?1e9:1;v.chat=(v.superfan?rnd(2.4,4.2):(live?rnd(6,13):rnd(26,50))*(v.trait==='Rowdy'?.6:1)*(1+visitors.length/40))*cm;if(!v.bubble&&(v.superfan?bubbleCount<8:bubbleCount<(live?4:2))&&v.state!=='enter')say(v,v.superfan&&Math.random()<.75?superLine(v):lineFor(v),v.superfan?1.4:live?1.6:2.6);}
   if(v.path.length){moveAlong(v,dt,(v.rush?82:v.state==='goWatch'?40:21)*((v.drunk||0)>2.5?.75:1));return;}
@@ -1798,7 +1798,7 @@ function update(dt){if(S._fp==null)S._fp=S.fame;if(S.fame>S._fp)S.fame=S._fp+(S.
     S.report={day:S.day-1,net:Math.round(S.gold-(S.dayStart??S.gold)),fighters:fw,maint,staff:staffW+mg,total:wage};S.dayStart=S.gold;try{endDayStats(wage);}catch(e){console.error(e);}
     try{if(S.inspect&&S.inspect.phase==='day'&&S.day>S.inspect.day){closeModal();setTimeout(inspectResult,400);}else if(!S.inspect&&!S.demoDone&&locOf()>=3&&(S.qu&&S.qu.s12==='done'||(S.ql&&S.ql.i>=STORY.findIndex(x=>x.id==='s12')+1))){setTimeout(startInspection,1500);}}catch(e){console.error(e);}S.market=Array.from({length:MKT_N()},()=>marketOffer(S));try{corpDay();}catch(e){}try{dayHooks();}catch(e){}
     toast(`☀ Day ${S.day} — paid ${wage}g in wages. New recruits at market!`);if(activeTab==='fighters')renderPanel();}
-  spawnT-=dt;if(spawnT<=0){const pf=1+Math.max(0,S.ticket-5)*.09;const hn=hourNow();spawnT=clamp(6-S.fame*.04-attractions()*.15,1,8)*pf*(anyFight()?.6:1)*rnd(.7,1.3)*(hn>=22||hn<6?4:hn>=19?1.6:1)*(evNow('carnival')?.5:1)*wxSpawn();
+  spawnT-=dt;if(spawnT<=0){const pf=1+Math.max(0,S.ticket/tkScale()-5)*.09;const hn=hourNow();spawnT=clamp(6-S.fame*.04-attractions()*.15,1,8)*pf*(anyFight()?.6:1)*rnd(.7,1.3)*(hn>=22||hn<6?4:hn>=19?1.6:1)*(evNow('carnival')?.5:1)*wxSpawn();
     if(visitors.length<maxVisitors()&&(counts.food+counts.show+(counts.bets||0)>0||fightReady))spawnVisitor();}
   visitors.forEach(v=>updVisitor(v,dt));visitors=visitors.filter(v=>!v.dead);
   idlerT-=dt;if(idlerT<=0){idlerT=.4;syncIdlers();ensureSuperfans();}idlers.forEach(r=>updIdler(r,dt));
@@ -2346,7 +2346,7 @@ function fireCrew(role){ensureMeta();const i=S.crew.list.map(c=>c.role).lastInde
 function syncCrew(force){if(!S||!S.crew)return;if(!counts.kitchen){crew.length=0;return;}const list=S.crew.list;if(!force&&crew.length===list.length&&crew.every((c,i)=>c.name===list[i].name&&c.role===list[i].role))return;crew.length=0;list.forEach(spec=>{const k=kitchenAnchor(),sp=spotNear(k)||randFloor();crew.push({kind:'s',role:spec.role,id:uid++,name:spec.name,x:sp[0]*T+4,y:sp[1]*T+6,ox:0,oy:0,path:[],dir:1,state:'idle',timer:0,walkT:0,mvT:0,bubble:null,chat:3,look:{type:'human',pal:spec.pal,hat:spec.role==='cook'},job:-1});});}
 function updService(dt){if(!S||!S.crew)return;syncCrew(false);const cooks=S.crew.list.filter(c=>c.role==='cook').length,rate=(1+((S.kit&&S.kit.hearth)||0)*.45)*(cooks?1.25:.55),slots=1+cooks*2+((S.kit&&S.kit.hearth)||0);let cooking=orders.filter(o=>o.st==='cook').length;for(const o of orders){if(o.st==='wait'||o.st==='cook'){o.lw=(o.lw||0)+dt;if(o.lw>45){const v=visitors.find(x=>x.id===o.vid);if(v){v.mood=Math.max(0,v.mood-18);say(v,pick(['Is the kitchen on fire?!','Forget it, I\'m leaving.','Slowest kitchen in SkyHaven.']),2.4);orders=orders.filter(x=>x!==o);releaseSpot(v);goLeave(v);}continue;}}if(o.st==='call'){o.pat+=dt;if(o.pat>26){const v=visitors.find(x=>x.id===o.vid);if(v){v.mood=Math.max(0,v.mood-25);say(v,pick(['Nobody took my order!','I\'ve waited FOREVER.','Terrible service!']),2.4);orders=orders.filter(x=>x!==o);releaseSpot(v);goLeave(v);}continue;}}if(o.st==='wait'&&cooking<slots){o.st='cook';cooking++;}if(o.st==='cook'){o.t-=dt*rate;if(o.t<=0){o.st='ready';o.t=0;o.wait=0;cooking--;}}if(o.st==='ready'||o.st==='out'){o.wait=(o.wait||0)+dt;if((o.st==='ready'&&!S.crew.list.some(c=>c.role==='server')&&o.wait>1.5)||o.wait>14)o.st='served';}}orders=orders.filter(o=>visitors.some(v=>v.id===o.vid&&(v.state==='dining'||v.state==='goDine')));const ka=kitchenAnchor(),spd=18*(1+((S.kit&&S.kit.bell)||0)*.45);crew.forEach(c=>{if(c.bubble){c.bubble.t-=dt;if(c.bubble.t<=0)c.bubble=null;}if(c.path.length){moveAlong(c,dt,c.role==='server'?spd:14);return;}if(c.role==='cook'){if(ka>=0&&!nearCrew(c,ka,18)){const s=spotNear(ka);if(s){const p=findPath(tileOf(c)[0],tileOf(c)[1],(x,y)=>x===s[0]&&y===s[1],walkV);if(p)c.path=p;}}else if(!c.bubble&&Math.random()<dt*.35)say(c,pick(['Hot plate!','More salt.','Mind the fire.','Almost ready.']),1.5);return;}{const mine=orders.some(o=>(o.st==='ready'||o.st==='out')&&o.srv===c.id);const tk=!mine&&(orders.find(o=>o.st==='call'&&o.tk===c.id)||orders.find(o=>o.st==='call'&&!o.tk));if(tk){tk.tk=c.id;const s=spotNear(tk.table);const here=tileOf(c);if(!s||(Math.abs(here[0]-s[0])+Math.abs(here[1]-s[1])<=1)){tk.st='wait';say(c,pick(['Coming right up!','One '+recipeBy(tk.rec).n+'.','Noted!']),1.4);return;}const p=findPath(here[0],here[1],(x,y)=>x===s[0]&&y===s[1],walkV);if(p&&p.length){c.path=p;return;}tk.st='wait';return;}}
     let job=orders.find(o=>(o.st==='ready'||o.st==='out')&&o.srv===c.id)||orders.find(o=>o.st==='ready'&&!o.srv);if(!job){if(ka>=0&&!nearCrew(c,ka,28)){const s=spotNear(ka);if(s){const p=findPath(tileOf(c)[0],tileOf(c)[1],(x,y)=>x===s[0]&&y===s[1],walkV);if(p)c.path=p;}}return;}job.srv=c.id;job.st='out';const s=spotNear(job.table);if(s){const here=tileOf(c);if(here[0]===s[0]&&here[1]===s[1]){job.st='served';say(c,recipeBy(job.rec).n+'!',1.3);return;}const p=findPath(here[0],here[1],(x,y)=>x===s[0]&&y===s[1],walkV);if(p&&p.length){c.path=p;return;}}job.st='served';});}
-function questPulse(dt){questT-=dt;if(questT>0||!S)return;questT=1.5;ensureMeta();for(const q of QUESTS){if(S.qdone[q.id])continue;let ok=false;try{ok=!!q.ok();}catch(e){ok=false;}if(!ok)continue;S.qdone[q.id]=1;if(q.rec)S.rec[q.rec]=1;S.gold+=q.gold||0;toast('📜 '+q.n+(q.rec?' — '+recipeBy(q.rec).n+' unlocked':'')+' · +'+(q.gold||0)+'g',4600);play('level');save();if(modal==='bld')renderModal();}}
+function questPulse(dt){questT-=dt;if(questT>0||!S)return;questT=1.5;ensureMeta();for(const q of QUESTS){if(S.qdone[q.id])continue;let ok=false;try{ok=!!q.ok();}catch(e){ok=false;}if(!ok)continue;S.qdone[q.id]=1;if(q.rec)S.rec[q.rec]=1;const _qg=Math.round((q.gold||0)*rwMul());S.gold+=_qg;toast('📜 '+q.n+(q.rec?' — '+recipeBy(q.rec).n+' unlocked':'')+' · +'+_qg+'g',4600);play('level');save();if(modal==='bld')renderModal();}}
 const PATRONS=[
   {id:'xam',cred:'Xamkor',name:'★ Xamkor',title:'The Director',color:'#b01e1e',join:.35,foe:false,purse:500,fame:8,hp:140,atk:14,spd:28,range:14,cd:.8,def:3,cls:'murmillo',lvl:12,lines:['Is this vibe coded? It\'s vibe coded.','Needs more steam.','Roll for initiative!','I wrote this place, you know.'],legend:1},
   {id:'shawna',cred:'Shawna',name:'★ Shawna',title:'The Builder',color:'#5bcefa',join:.3,foe:false,purse:400,fame:7,hp:120,atk:13,spd:30,range:60,cd:1,def:2,cls:'sagittarius',lvl:11,lines:['Did you compile it?','Ship it.','Found a bug. Squashed it.'],legend:1},
@@ -3598,9 +3598,9 @@ function acceptGiver(v){ensureQL();const qg=v.qg;let r;
   else r=qg.req;
   S.reqs.push(r);if(r.sub==='sponsor'){S.reqs=S.reqs.filter(x=>x!==r);S._tpool=r.pool;S._tspon=r.who;ensureEv();if(S.ev.cur&&!raidNow())endEvent();startEvent('tournament');}if(r.sub==='hunt')setTimeout(()=>{expPick.k='hunt';openModal('exped');},400);qg.taken=true;v.state='idle';v.timer=rnd(1,3);say(v,pick(['Splendid.','I knew I came to the right place.','Don\'t disappoint me.']),2);play('level');
   toast('📜 Request accepted: '+r.label+(r.kind==='goal'?'':' — find it in ⚔ Bout'),3600);save();renderPanel();}
-function rewardTxt(rw){const p=[];if(rw.gold)p.push('💰 '+rw.gold+'g');if(rw.fame)p.push('⭐ +'+rw.fame);if(rw.item)p.push('🎁 '+ITEMS[rw.item].n);if(rw.unlock)p.push('🔓 '+(UNLOCK_N[rw.unlock]||rw.unlock));if(rw.recipe)p.push('🍲 '+recipeBy(rw.recipe).n);if(rw.drink)p.push('🍹 '+(DRINKS.find(d=>d.id===rw.drink)||{n:rw.drink}).n);if(rw.rations)p.push('🍞 '+rw.rations+' rations');if(rw.water)p.push('💧 '+rw.water+'L');if(rw.loyal)p.push('⭐ a loyal regular');if(rw.gift)p.push('🎁 '+GIFTS[rw.gift].n);return p.join(' · ');}
+function rewardTxt(rw){const p=[];if(rw.gold)p.push('💰 '+Math.round(rw.gold*rwMul())+'g');if(rw.fame)p.push('⭐ +'+rw.fame);if(rw.item)p.push('🎁 '+ITEMS[rw.item].n);if(rw.unlock)p.push('🔓 '+(UNLOCK_N[rw.unlock]||rw.unlock));if(rw.recipe)p.push('🍲 '+recipeBy(rw.recipe).n);if(rw.drink)p.push('🍹 '+(DRINKS.find(d=>d.id===rw.drink)||{n:rw.drink}).n);if(rw.rations)p.push('🍞 '+rw.rations+' rations');if(rw.water)p.push('💧 '+rw.water+'L');if(rw.loyal)p.push('⭐ a loyal regular');if(rw.gift)p.push('🎁 '+GIFTS[rw.gift].n);return p.join(' · ');}
 const UNLOCK_N={freedom:'Vapor-Forge fees halved forever',clerk:'Betting clerks',organ:'Steam Organ',automaton:'Brass Automaton',tesla:'Arc Pylon',clock:'Clocktower'};
-function completeReq(r,ok,b){S.reqs=S.reqs.filter(x=>x!==r);if(!ok)return;const rw=r.rw||{};ensureEco();if(rw.rations)S.rations+=rw.rations;if(rw.water)S.water=Math.min(waterCap()+rw.water,S.water+rw.water);if(rw.gift)S.gifts.push(rw.gift);if(rw.loyal){const g=visitors.find(v=>v.name===r.who&&!v.dead);if(g)makeLoyal(g,'kept their word');else{S.loyal.push({id:'g'+(uid++),name:r.who,look:{type:'human',pal:randPal(),hat:true},trait:'Loyal',gifts:[],fond:90,visits:0});toast('⭐ '+r.who+' is now a loyal regular',4000);}}S.gold+=rw.gold||0;S.fame+=rw.fame||0;
+function completeReq(r,ok,b){S.reqs=S.reqs.filter(x=>x!==r);if(!ok)return;const rw=r.rw||{};ensureEco();if(rw.rations)S.rations+=rw.rations;if(rw.water)S.water=Math.min(waterCap()+rw.water,S.water+rw.water);if(rw.gift)S.gifts.push(rw.gift);if(rw.loyal){const g=visitors.find(v=>v.name===r.who&&!v.dead);if(g)makeLoyal(g,'kept their word');else{S.loyal.push({id:'g'+(uid++),name:r.who,look:{type:'human',pal:randPal(),hat:true},trait:'Loyal',gifts:[],fond:90,visits:0});toast('⭐ '+r.who+' is now a loyal regular',4000);}}S.gold+=Math.round((rw.gold||0)*rwMul());S.fame+=rw.fame||0;
   if(rw.item){S.inv=S.inv||[];S.inv.push(rw.item);}if(rw.unlock)S.qu[rw.unlock]=1;if(rw.unlock==='freedom'){ensureCorp();S.corp.eased=1;S.corp.free=1;}if(rw.recipe){ensureMeta();S.rec[rw.recipe]=1;}if(rw.drink)S.drinks[rw.drink]=1;
   let doneLine='Pleasure doing business.';if(r.sid){const st=storyStep(r.sid);S.guild=S.guild||{brass:0,book:0,board:0};const gk={vesta:'brass',marcia:'book',varo:'board',corvus:'board',envoy:'board'}[st.g];if(gk)S.guild[gk]=Math.min(100,S.guild[gk]+20);doneLine=st.done;S.ql.i=STORY.indexOf(st)+1;S.ql.cd=rnd(35,60);S.qdoneS=(S.qdoneS||0)+1;}
   const g=visitors.find(v=>v.name===r.who&&!v.dead);if(g){say(g,doneLine,4);popAt('📜 '+rewardTxt(rw),g.x,g.y,'#ffd34d',4500);}else if(b)popArena(b.ar,'📜 '+r.who+': '+rewardTxt(rw),'#ffd34d',4500);
@@ -3716,7 +3716,7 @@ function layoutGo(){if(!LP||!LP.sel)return;const L=LP,o=L.sel;LP=null;closeModal
   if(S.gold<PLOTS[L.lv].cost){toast('Not enough gold — need '+PLOTS[L.lv].cost+'g');return;}if(typeof wpStart==='function'){wpStart(L.lv,o.k,o.side);return;}S.layout=S.layout||[];S.lside=S.lside||[];S.layout[L.lv]=o.k;S.lside[L.lv]=o.side;_pm={};S.exp=L.lv-1;doExpand();}
 // ---- buildings: wings, moves, gates ----
 const nextWing=()=>{if(S.exp==null)return -1;const n=S.exp+1;return n<PLOTS.length&&PLOTS[n].kind==='wing'&&sidesFree(n).length?n:-1;};
-const nextHall=()=>{if(S.exp==null)return -1;for(let k=S.exp+1;k<PLOTS.length;k++)if(PLOTS[k].kind==='hall')return k;return -1;};
+const nextHall=()=>{if(S.exp==null)return -1;for(let k=S.exp+1;k<PLOTS.length;k++)if(PLOTS[k].kind==='hall'&&!(typeof hallOwned==='function'&&hallOwned(PLOTS[k].b)))return k;return -1;};
 const storyPast=id=>{ensureQL();const k=STORY.findIndex(x=>x.id===id);return k>=0&&S.ql.i>k;};
 const BGATE={1:['s4i','finish every Sewer task in the Journal'],2:['s10','finish Chapter III (Brass & Blood)'],3:['s11','finish the Lion & Tiger bout (Chapter IV)']};
 function bGateOk(){const nh=nextHall();if(nh<0)return false;const g=BGATE[PLOTS[nh].b];return !g||storyPast(g[0])||S.sandbox;}
@@ -6447,8 +6447,8 @@ const PLANS=[
   ['Cloud saves (custom)','Our own cloud integration for the next Android version.'],
   ['Balance pass','Tune the 2h / 6h progression after real playtests.']];
 function payChance(p){const b=Math.max(1,willBase());if(p<=3)return 1;return clamp((1.3-(p-.5)/b)/.45,0,1);}
-function ticketTable(){const p=S.ticket,c=payChance(p),m0=clamp(64-Math.max(0,p-6)*3,8,90),dr=Math.max(0,p-10)*1.5;const col=c>.8?'#8fe08a':c>.4?'#e8d27a':'#f5a0a0';
-  let best=2,bv=0;for(let q=1;q<=30;q++){const v=payChance(q)*q*(q>10?.85:1);if(v>bv){bv=v;best=q;}}
+function ticketTable(){const p=S.ticket,c=payChance(p),m0=clamp(64-Math.max(0,p/tkScale()-6)*3,8,90),dr=Math.max(0,p/tkScale()-10)*1.5;const col=c>.8?'#8fe08a':c>.4?'#e8d27a':'#f5a0a0';
+  let best=2,bv=0;for(let q=1;q<=tkCap();q+=tkStep()){const v=payChance(q)*q*(q>10*tkScale()?.85:1);if(v>bv){bv=v;best=q;}}
   const chip=(l,v,c2)=>`<div style="flex:1;background:rgba(0,0,0,.25);border-radius:6px;padding:4px 2px;text-align:center"><div style="font-size:11px;color:#c9a46a">${l}</div><b style="font-size:15px;color:${c2||'#f4e4c4'}">${v}</b></div>`;
   return `<div style="display:flex;gap:4px;margin:4px 0">${chip('Pay',Math.round(c*100)+'%',col)}${chip('Mood',m0)}${chip('Drain',dr?'−'+dr.toFixed(1):'—')}${chip('/10 fans',Math.round(10*c*p)+'g')}</div><div style="font-size:12px;color:#c9a46a">💡 Sweet spot right now: ~${best}g</div>`;}
 function statusTxt(f){return f.status==='fighting'?'In arena':idlers.some(r=>r.rid===f.id&&r.state==='healing')?'At medic':canFight(f)?'Ready':'Recovering';}
@@ -6516,7 +6516,7 @@ panel.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
   else if(a==='sell'){const id=+b.dataset.id,f=S.roster.find(r=>r.id===id);if(f&&f.status!=='fighting'&&S.roster.length>1){if(pendingSell!==id){pendingSell=id;play('error');renderPanel();return;}pendingSell=null;startExecution(f);}}
   else if(a==='heal'){const f=S.roster.find(r=>r.id===+b.dataset.id);if(f&&healWait(f)){toast(`💊 ${f.name.split(' ')[0]} can be patched up again in ${healWait(f)}s`,2200);}else if(f){const c=healCost(f);if(S.gold<c){toast('Not enough gold');}else{S.gold-=c;f.hp=maxHp(f);healMark(f);play('level');toast('💊 '+f.name.split(' ')[0]+' fully healed');save();}}}
   else if(a==='unq'){boutQ.splice(+b.dataset.i,1);}
-  else if(a==='tk'){S.ticket=clamp(S.ticket+ +b.dataset.d,0,Math.round(40*locMul()));save();}
+  else if(a==='tk'){S.ticket=clamp(S.ticket+ +b.dataset.d*tkStep(),0,tkCap());save();}
   else if(a==='settings'){openModal('settings');}
   else if(a==='roadmap'){openModal('roadmap');}
   else if(a==='bmove'){openModal('bmove');}
@@ -9029,7 +9029,7 @@ function legVisitTick(dt){for(const v of visitors){if(!v.patron||v.dead)continue
 // ---------- hook into the game loop ----------
 let exxonT=rnd(200,320);
 {const _u=update;update=function(dt){_u(dt);try{if(!S||!S.introDone||(typeof cine!=='undefined'&&cine))return;legDaily();exxonTick(dt);guestWithdrawal(dt);fighterSmashTick(dt);authTick(dt);legVisitTick(dt);
-  exxonT-=dt;if(exxonT<=0){exxonT=rnd(260,420);if(S.fame>=15&&!visitors.some(v=>v.patron==='exxon')&&Math.random()<.5&&(counts.seat||counts.kitchen))spawnPatron(legOf('exxon'));}
+  exxonT-=dt;if(exxonT<=0){exxonT=rnd(260,420);if(S.fame>=15&&!visitors.some(v=>v.patron==='exxon')&&Math.random()<.5&&(counts.seat||counts.kitchen)&&(typeof legFairOk!=='function'||legFairOk('exxon')))spawnPatron(legOf('exxon'));}
   if(S.legStay&&!S.guestFighter){const sid=S.legStay.id;S.guestFighter=legGuestSpec(sid);}}catch(e){console.error(e);}};}
 // debug helpers
 window.legDebug=id=>{const P=legOf(id);if(P)spawnPatron(P);};
@@ -21778,6 +21778,262 @@ let PN_PEND=false;
 {const _sn=startNewGame;startNewGame=function(){PN_PEND=false;return _sn.apply(this,arguments);};}
 setInterval(()=>{try{if(!PN_PEND||localStorage.getItem(PN_KEY)===PN_VER)return;if(typeof menuOpen!=='undefined'&&menuOpen)return;if(!S||(S.day||1)<2)return;
   if(uiBlock||modal||document.body.classList.contains('dlgopen')||(typeof TBF!=='undefined'&&TBF.on)||(typeof SCN!=='undefined'&&SCN)||(typeof CHT!=='undefined'&&CHT.on)||document.getElementById('hfeed')||document.getElementById('wnBox'))return;pnShow();}catch(_){}},2500);
+
+// ================= v1.11d · YOUR HALLS: every building you move into stays yours =================
+// The Sump, Steamworks Row, the Clocktower and the Spire each keep their own map. Moving on no longer
+// sells the old place: it's saved exactly as you left it, a skeleton crew keeps it open, and it pays
+// a share of its takings every night. You can travel back to any hall you own, any time.
+const HALL_KEYS=['ground','objs','ceil','floor'];
+const HALL_MAPS=['upg','dealer','ruin','dmg','slv','blv','haz','rot','piles','casDay','casAll'];
+const AWAY_CUT=.4,AWAY_UPKEEP=.5,HALL_HIST=7;
+const HALL_IC=['🕳','⚙','🕰','✨'];
+const HALL_BLURB=['Down in the Undercity Sump, where it all started.','Topside on Steamworks Row: boilers, pickpockets and paying customers.','The Clocktower Building, all gears and polished brass.','The Celestial Spire, where the Board can see you.'];
+const hallStart=b=>PLOTS.findIndex(p=>p.kind==='hall'&&p.b===b);
+const hallName=b=>{const k=hallStart(b);return k>=0?PLOTS[k].name:'Hall';};
+function hallsEnsure(){if(!S)return {};S.bases=S.bases||{};S.baseHist=S.baseHist||{};if(S.expMax==null||S.expMax<(S.exp|0))S.expMax=S.exp|0;return S.bases;}
+function hallOwned(b){if(!S)return false;try{if(curHallB()===b)return true;}catch(_){}return !!(S.bases&&S.bases[b]);}
+function hallsOwned(){hallsEnsure();const o=[];for(let b=0;b<4;b++)if(hallOwned(b))o.push(b);return o;}
+const locMax=()=>{try{hallsEnsure();return PLOTS[clamp(S.expMax|0,0,PLOTS.length-1)].loc;}catch(_){return locOf();}};
+
+// ---- compact snapshots: the tile arrays are mostly empty, so store only what's there ----
+function hSparse(arr){if(!arr)return null;const o={};for(let i=0;i<arr.length;i++){const v=arr[i];if(v!=null&&v!==0&&v!=='')o[i]=v;}return o;}
+function hUnsparse(o,fill){const a=new Array(W*H).fill(fill);if(o)for(const k in o)a[+k]=o[k];return a;}
+function hClone(v){return v==null?v:JSON.parse(JSON.stringify(v));}
+function hallSnap(){const b=curHallB();const s={b,exp:S.exp,legacy:S.legacy?hClone(S.legacy):null,day:S.day,since:S.day,earned:0};
+  s.g=hSparse(S.ground);s.o=hSparse(S.objs);s.c=hSparse(S.ceil);s.f=S.floor?hSparse(S.floor):null;
+  for(const k of HALL_MAPS)s[k]=hClone(S[k]);
+  s.n=0;for(const k in s.o){const t=s.o[k];if(typeof t==='string'&&t.charCodeAt(0)!==64&&OBJ[t])s.n++;}
+  s.val=hallValueOf(s);s.maint=hallMaintOf(s);return s;}
+function hallValueOf(s){let v=0;for(const k in (s.o||{})){const t=s.o[k];if(typeof t==='string'&&t.charCodeAt(0)!==64&&OBJ[t])v+=OBJ[t].cost||0;}return v;}
+function hallMaintOf(s){const lm=LOCS[PLOTS[hallStart(s.b)].loc].mul;let m=0;for(const k in (s.o||{})){const t=s.o[k];if(typeof t==='string'&&t.charCodeAt(0)!==64&&OBJ[t])m+=Math.round((OBJ[t]._b!=null?OBJ[t]._b:OBJ[t].cost)*lm*.012);}return m;}
+// an empty lot for a hall you left before v1.11d (the old moving sale already sold what was there)
+function hallEmpty(b){const k=hallStart(b);let exp=k;for(let lv=k+1;lv<PLOTS.length&&PLOTS[lv].b===b;lv++)if((S.layout||[])[lv]!=null)exp=lv;return {b,exp,legacy:null,day:S.day,since:S.day,earned:0,empty:1,g:null,o:{},c:{},f:null,n:0,val:0,maint:0};}
+
+// ---- reset everything that lives on the map, the way a move does ----
+function hallClearRuntime(){try{visitors=[];keepers=[];avatar=null;bouts=[];boutQ=[];decals=[];gibs=[];props=[];expAnim=null;}catch(_){}
+  try{if(typeof held!=='undefined'&&held){S.crates=S.crates||{};S.crates[held.t]=(S.crates[held.t]||0)+1;held=null;}}catch(_){}
+  _pm={};}
+function hallPlaceCrew(){const[gx,gy]=exitGoal();const put=(r,i)=>{r.x=(gx+(i%5)-2)*T+4;r.y=(gy-2-((i/5)|0))*T+6;r.path=[];r.state='idle';r.timer=0;r.target=undefined;r.shopK=undefined;r.bed=undefined;r.post=undefined;r.job=null;r.prop=null;r.frameOverride=null;r.ox=0;r.oy=0;};
+  try{idlers.forEach(put);}catch(_){}try{workers.forEach(put);}catch(_){}}
+function hallAfterMap(){try{themeDirty();}catch(_){}groundDirty=true;farDirty=true;try{applyEcon();}catch(_){}hallPlaceCrew();try{onMapChange();}catch(e){console.error(e);}try{fitCam();}catch(_){}}
+function hallRestore(s){S.exp=s.exp;if(s.legacy)S.legacy=hClone(s.legacy);else delete S.legacy;
+  if(s.empty&&!s.g){S.objs=new Array(W*H).fill(null);S.ground=new Array(W*H).fill(GR);S.ceil=new Array(W*H).fill(null);if(S.floor)S.floor=new Array(W*H).fill(null);
+    for(const k of HALL_MAPS){if(k==='piles')S.piles=[];else if(k==='rot')S.rot={};else if(k==='haz')S.haz=S.haz&&!Array.isArray(S.haz)?{}:null;else S[k]={};}
+    try{const b=s.b;if(typeof HALL_GROW!=='undefined'&&HALL_GROW[b]){S.hallSz=S.hallSz||{};if(!S.hallSz[b])S.hallSz[b]=HALL_GROW[b].slice();}}catch(_){}
+    _pm={};stampGround(S);}
+  else{S.ground=hUnsparse(s.g,GR);S.objs=hUnsparse(s.o,null);S.ceil=hUnsparse(s.c,null);if(s.f||S.floor)S.floor=hUnsparse(s.f,null);
+    for(const k of HALL_MAPS){const v=hClone(s[k]);if(v!==undefined)S[k]=v;else if(k==='piles')S.piles=[];else S[k]={};}}
+  if(!Array.isArray(S.piles))S.piles=[];}
+
+// ---- travel between halls you own ----
+function hallBusy(){if(typeof bouts!=='undefined'&&bouts.some(b=>b.phase&&b.phase!=='done'))return 'Finish the bout first.';
+  if(typeof TBF!=='undefined'&&TBF.on)return 'Finish the fight first.';if(typeof WP!=='undefined'&&WP)return 'Finish placing the new wing first.';
+  if(typeof cut!=='undefined'&&cut)return 'Wait for the scene to end.';if(S.raid&&S.raid.on)return 'Not during a raid!';
+  try{if(visitors.some(v=>v.raider||v.pirate))return 'Not while raiders are inside!';}catch(_){}return '';}
+function hallTravel(b){hallsEnsure();const cur=curHallB();if(b===cur){closeModal();return;}const tgt=S.bases[b];if(!tgt){toast('You don\'t own that hall yet');return;}
+  const why=hallBusy();if(why){toast('🚫 '+why,2600);try{play('error');}catch(_){}return;}
+  const snap=hallSnap();snap.hist=(S.baseHist[cur]||[]).slice();S.bases[cur]=snap;delete S.bases[b];
+  hallClearRuntime();hallRestore(tgt);S.bmLater=0;S.hallRev=0;S.hallPart=1;hallAfterMap();
+  const away=Math.max(0,S.day-(tgt.since||S.day));S.hallVisits=(S.hallVisits||0)+1;
+  closeModal();save();try{play('gong');}catch(_){}
+  hallArrive(b,tgt,away);}
+function hallArrive(b,tgt,away){const L=LOCS[PLOTS[hallStart(b)].loc];
+  const earned=tgt.earned||0;const msg=tgt.empty?`${HALL_IC[b]} Back at ${hallName(b)}. The old moving sale cleared it out, but the lot and the wings you paid for are still yours. Build it back up and it'll earn for you whenever you're away.`
+    :`${HALL_IC[b]} Back at ${hallName(b)}. ${away?`You were away ${away} day${away>1?'s':''}`:'You were barely gone'}${earned?`, and the crew sent home ${earned.toLocaleString()}g`:''}. Everything is just as you left it.`;
+  toast(`🚂 ${hallName(b)} · costs ×${L.mul} · purses ×${L.mul}`,3800);
+  try{newsPush(`🚂 You're running ${hallName(b)} again.`);}catch(_){}
+  setTimeout(()=>{try{dialog([{who:'',look:typeof NARR!=='undefined'?NARR:null,narr:true,text:msg}]);}catch(_){}},700);}
+
+// ---- moving to a NEW hall keeps the old one instead of selling it ----
+let HALL_MOVING=false;
+lotValue=function(){return 0;};// nothing is sold any more
+{const _pm0=performMove;performMove=function(lv,shape,free){hallsEnsure();const nb=PLOTS[lv]&&PLOTS[lv].b,cur=curHallB();
+  if(PLOTS[lv]&&PLOTS[lv].kind==='hall'&&nb!==cur&&S.bases[nb]){return hallTravel(nb);}
+  const P=PLOTS[lv];if(!free&&S.gold<P.cost){toast('Not enough gold to move');return;}
+  const snap=(PLOTS[lv]&&PLOTS[lv].kind==='hall'&&nb!==cur)?hallSnap():null;if(snap)snap.hist=(S.baseHist[cur]||[]).slice();
+  HALL_MOVING=!!snap;let r;try{r=_pm0.apply(this,arguments);}finally{HALL_MOVING=false;}
+  if(snap&&curHallB()===nb){S.bases[cur]=snap;S.hallRev=0;S.hallPart=1;S.expMax=Math.max(S.expMax|0,S.exp|0);hallPlaceCrew();
+    setTimeout(()=>{try{toast(`🏚 ${hallName(cur)} stays yours. A skeleton crew keeps it open and sends home about ${hallAwayRate(cur).toLocaleString()}g a night.`,6000);}catch(_){}},2600);}
+  return r;};}
+// the move screen tells the truth about what happens now
+{const _bh=bmoveHTML;bmoveHTML=function(){let h=_bh.apply(this,arguments);try{const cur=curHallB();hallsEnsure();const est=hallAwayRate(cur,hallSnap());
+  h=h.replace(/<div class="q"><span>📦 Your structures are sold<\/span><b>[^<]*<\/b><\/div>/,`<div class="q"><span>🏚 ${esc(hallName(cur))} stays yours and keeps earning</span><b>+${est.toLocaleString()}g/night</b></div>`);
+  h=h.replace(/You start placing from scratch\./,'You start the new place from scratch, and you can travel back to any hall you own from 🏛 Your halls.');
+  const nh=nextHall();if(nh>=0){h=h.replace(/data-m="bmgo"\s*(disabled)?/,'data-m="bmgo" '+(S.gold>=PLOTS[nh].cost?'':'disabled'));}}catch(_){}return h;};}
+
+// ---- the takings: what each hall earns while you're in it, and what it sends home while you're not ----
+let HALL_SELL=0;
+for(const fn of ['build','useTool','ceilAt']){try{const _f=window[fn];if(typeof _f==='function'){const w=function(){HALL_SELL++;try{return _f.apply(this,arguments);}finally{HALL_SELL--;}};
+  if(fn==='build')build=w;else if(fn==='useTool')useTool=w;else ceilAt=w;}}catch(_){}}
+{const _cp=coinPop;coinPop=function(x,y,amt){try{if(!HALL_SELL&&S&&amt>0&&amt<5000){S.hallRev=(S.hallRev||0)+amt;}}catch(_){}return _cp.apply(this,arguments);};}
+function hallAvg(b,s){const H=(s&&s.hist)||(S.baseHist&&S.baseHist[b])||[];if(!H.length)return null;return H.reduce((a,x)=>a+x,0)/H.length;}
+function hallAwayRate(b,sOpt){const s=sOpt||(S.bases&&S.bases[b]);if(!s)return 0;const avg=hallAvg(b,s);
+  const gross=avg!=null?avg:(s.val||0)*.03*LOCS[PLOTS[hallStart(b)].loc].mul;
+  return Math.max(0,Math.round(gross*AWAY_CUT-(s.maint||0)*AWAY_UPKEEP));}
+function hallAwayFame(b){const s=S.bases&&S.bases[b];if(!s||(s.n||0)<8)return 0;return Math.round((.15+.1*PLOTS[hallStart(b)].loc)*10)/10;}
+{const _eds=endDayStats;endDayStats=function(){try{hallsEnsure();const cur=curHallB();
+    const H=S.baseHist[cur]=(S.baseHist[cur]||[]);if(!S.hallPart){H.push(Math.round(S.hallRev||0));while(H.length>HALL_HIST)H.shift();}S.hallRev=0;S.hallPart=0;
+    const parts=[];let tot=0,fm=0;for(const k in S.bases){const b=+k;const g=hallAwayRate(b);const f=hallAwayFame(b);if(g||f){S.gold+=g;S.fame+=f;tot+=g;fm+=f;S.bases[k].earned=(S.bases[k].earned||0)+g;parts.push({b,g,f});}}
+    S.awayInc={day:S.day-1,tot,fm:Math.round(fm*10)/10,parts};S.hallsEarned=(S.hallsEarned||0)+tot;}catch(e){console.error(e);}
+  return _eds.apply(this,arguments);};}
+{const _dsh=dayStatHTML;dayStatHTML=function(){let h=_dsh.apply(this,arguments);try{const A=S.awayInc;if(A&&A.parts&&A.parts.length&&A.day===((S.dstat&&S.dstat.day)??A.day)){
+  const rows=A.parts.map(p=>`<div class="q"><span>${HALL_IC[p.b]} ${esc(hallName(p.b))}</span><b>+${p.g.toLocaleString()}g${p.f?` · ⭐ +${p.f}`:''}</b></div>`).join('');
+  const box=`<div class="hallrep"><div class="hrh">🏛 YOUR OTHER HALLS</div>${rows}<div class="small" style="opacity:.75">Skeleton crews keep them open: 40% of their usual takings, after half their upkeep. Already in today's total.</div></div>`;
+  const i=h.lastIndexOf('<div class="row"');h=i>0?h.slice(0,i)+box+h.slice(i):h+box;}}catch(_){}return h;};}
+
+// ---- 🏛 Your halls ----
+v1aStyle(`.hallsm .hcard{position:relative;border-radius:12px;border:2px solid #6b4a22;background:linear-gradient(160deg,rgba(255,210,120,.08),transparent 45%),#1e140a;padding:9px 10px 9px 66px;margin:7px 0;min-height:64px}
+.hallsm .hcard.cur{border-color:#ffd84a;box-shadow:0 0 12px rgba(255,216,74,.25)}.hallsm .hcard.lock{opacity:.55;filter:saturate(.4)}
+.hallsm .hcard canvas{position:absolute;left:8px;top:9px;width:50px;height:50px;border-radius:8px;border:1px solid #6b4a22;background:#0c0804;image-rendering:pixelated}
+.hallsm .hn{font-size:17px;color:#ffe9a8}.hallsm .hb{font-size:13px;opacity:.8;margin:1px 0 4px}.hallsm .hs{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:13px}.hallsm .hs b{color:#ffd84a;font-weight:normal}
+.hallsm .tag{position:absolute;right:8px;top:8px;font-size:11px;padding:1px 7px;border-radius:999px;background:#ffd84a;color:#1a0f08}.hallsm .hcard button{margin-top:6px}
+.hallsm .tot{display:flex;justify-content:space-between;font-size:14px;padding:6px 2px;border-top:1px solid rgba(216,166,72,.3)}
+.hallrep{margin:8px 0;padding:7px 9px;border-radius:10px;border:1px solid rgba(216,166,72,.45);background:rgba(255,216,74,.06)}.hallrep .hrh{font-family:'Press Start 2P',monospace;font-size:9px;color:#d8a648;margin-bottom:4px}
+#hallsBtn{position:absolute;right:8px;bottom:calc(100% + 4px);z-index:7;font-size:15px;padding:4px 10px;border-radius:10px;background:linear-gradient(#3a2814,#1e140a);color:#ffe9a8;border:1px solid #c9973e;box-shadow:0 0 8px rgba(0,0,0,.4)}`);
+function hallsHTML(){hallsEnsure();const cur=curHallB();const nh=nextHall();let tot=0;
+  const cards=[0,1,2,3].map(b=>{const own=hallOwned(b),isCur=b===cur,s=S.bases[b];const k=hallStart(b);const L=LOCS[PLOTS[k].loc];
+    if(!own){const isNext=nh>=0&&PLOTS[nh].b===b;return `<div class="hcard lock"><canvas data-hthumb="${b}" width="50" height="50"></canvas><div class="hn">${HALL_IC[b]} ${esc(hallName(b))}</div><div class="hb">${isNext?(bGateOk()?`Ready to move in: ${PLOTS[k].cost.toLocaleString()}g.`:`Locked: ${esc(bGateTxt())}.`):'Not yet.'}</div>${isNext&&bGateOk()?`<button class="mini" data-hall="move">🚚 Move in ▸</button>`:''}</div>`;}
+    const snap=isCur?null:s;const n=isCur?(()=>{let c=0;for(let a=0;a<W*H;a++){const t=S.objs[a];if(typeof t==='string'&&t.charCodeAt(0)!==64&&OBJ[t])c++;}return c;})():(s.n||0);
+    const wings=(isCur?S.exp:s.exp)-k;const avg=hallAvg(b,snap);const rate=isCur?0:hallAwayRate(b);tot+=rate;
+    return `<div class="hcard ${isCur?'cur':''}"><canvas data-hthumb="${b}" width="50" height="50"></canvas>${isCur?'<span class="tag">YOU ARE HERE</span>':''}<div class="hn">${HALL_IC[b]} ${esc(hallName(b))}</div><div class="hb">${HALL_BLURB[b]}</div>
+      <div class="hs"><span>🏗 <b>${n}</b> structures</span><span>🧱 <b>${wings}</b> wing${wings===1?'':'s'}</span><span>💰 ×${L.mul}</span>${avg!=null?`<span>📈 <b>${Math.round(avg).toLocaleString()}g</b>/day takings</span>`:''}
+      ${isCur?'':`<span>🏚 sends <b>+${rate.toLocaleString()}g</b>/night</span>${hallAwayFame(b)?`<span>⭐ +${hallAwayFame(b)}</span>`:''}<span>⏳ away ${Math.max(0,S.day-(s.since||S.day))}d</span>${s.earned?`<span>💼 <b>${s.earned.toLocaleString()}g</b> so far</span>`:''}`}</div>
+      ${isCur?'':`<button data-hall="go:${b}">🚂 Travel here</button>`}${s&&s.empty&&!isCur?'<div class="small" style="margin-top:4px;opacity:.75">Emptied by the old moving sale. Build it back up and it will earn while you\'re away.</div>':''}</div>`;}).join('');
+  return `<div class="mhead"><h3 style="margin:0">🏛 YOUR HALLS</h3><button data-m="close">✕</button></div><div class="hallsm">
+   <div class="small">Every hall you've moved into is still yours, exactly as you left it. Your fighters, staff, beasts, gold and story travel with you. The halls you're not in stay open with a skeleton crew and send home 40% of their usual takings every night, after half their upkeep.</div>
+   ${cards}<div class="tot"><span>🏚 Away halls, every night</span><b>+${tot.toLocaleString()}g</b></div>${S.hallsEarned?`<div class="small" style="opacity:.75">They've sent home ${S.hallsEarned.toLocaleString()}g in total.</div>`:''}</div>`;}
+// a tiny live picture of each hall, drawn from its own tiles
+function hallThumb(cv,b){const x=cv.getContext('2d');const w=cv.width,h=cv.height;x.fillStyle='#0c0804';x.fillRect(0,0,w,h);
+  let g,o;if(b===curHallB()){g=S.ground;o=S.objs;}else{const s=S.bases&&S.bases[b];if(!s){x.fillStyle='#3a2a18';x.font='22px serif';x.textAlign='center';x.fillText(HALL_IC[b],w/2,h/2+8);return;}g=s.g?hUnsparse(s.g,GR):null;o=s.o?hUnsparse(s.o,null):null;}
+  if(!g){x.fillStyle='#3a2a18';x.fillRect(10,10,w-20,h-20);return;}
+  const C={0:null,1:'#6b5a44',2:'#d8b46a',3:'#3a2a1c',4:'#2e6a2a'};let x0=W,y0=H,x1=0,y1=0;for(let i=0;i<W*H;i++)if(g[i]&&g[i]!==GR){const X=i%W,Y=(i/W)|0;x0=Math.min(x0,X);y0=Math.min(y0,Y);x1=Math.max(x1,X);y1=Math.max(y1,Y);}
+  if(x1<x0){return;}const sc=Math.min(w/(x1-x0+1),h/(y1-y0+1));const ox=(w-(x1-x0+1)*sc)/2,oy=(h-(y1-y0+1)*sc)/2;
+  for(let i=0;i<W*H;i++){const c=C[g[i]];const X=i%W,Y=(i/W)|0;if(c){x.fillStyle=c;x.fillRect(ox+(X-x0)*sc,oy+(Y-y0)*sc,Math.ceil(sc),Math.ceil(sc));}
+    if(o&&o[i]){x.fillStyle=typeof o[i]==='string'&&o[i].charCodeAt(0)!==64?'#ffd84a':'#c9973e';x.fillRect(ox+(X-x0)*sc,oy+(Y-y0)*sc,Math.ceil(sc),Math.ceil(sc));}}}
+{const _rm=renderModal;renderModal=function(){if(modal==='halls'){const box=document.getElementById('mbox');if(box){box.innerHTML=hallsHTML();box.querySelectorAll('[data-hthumb]').forEach(cv=>{try{hallThumb(cv,+cv.dataset.hthumb);}catch(_){}});return;}}return _rm.apply(this,arguments);};}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-hall]');if(!b)return;e.stopPropagation();e.preventDefault();try{play('click');}catch(_){}
+  const v=b.dataset.hall;if(v==='move'){openModal('bmove');return;}if(v.startsWith('go:'))hallTravel(+v.slice(3));},true);
+// the 🏛 button over the panel, once you own two halls
+(function(){const mk=()=>{const ref=document.getElementById('bmoveBtn');if(!ref||document.getElementById('hallsBtn'))return;const b=document.createElement('button');b.id='hallsBtn';b.style.display='none';b.textContent='🏛 Your halls';ref.parentNode.insertBefore(b,ref);b.onclick=()=>{try{play('click');}catch(_){}openModal('halls');};};
+  try{mk();}catch(_){}setInterval(()=>{try{mk();const el=document.getElementById('hallsBtn');if(!el)return;const show=S&&!menuOpen&&hallsOwned().length>=2&&!modal&&!document.body.classList.contains('dlgopen')&&!(typeof TBF!=='undefined'&&TBF.on);el.style.display=show?'':'none';}catch(_){}},700);})();
+// …and a card on the City ▸ More page
+{const _cp2=cityPage;cityPage=function(k){let h=_cp2.apply(this,arguments);try{if(k==='more'){const n=hallsOwned().length;h=moCard('🏛','Your halls',n>=2?`You own ${n} halls. The ones you're not in send home about ${hallsOwned().filter(b=>b!==curHallB()).reduce((a,b)=>a+hallAwayRate(b),0).toLocaleString()}g a night.`:'Every hall you move into stays yours, and you can come back any time.',`<button class="mini" data-hall-open="1">🏛 Open</button>`)+h;}}catch(_){}return h;};}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-hall-open]');if(!b)return;e.stopPropagation();openModal('halls');},true);
+
+// ---- story progress counts the furthest you've ever moved, not where you happen to be standing ----
+try{const st=id=>STORY.find(x=>x.id===id);const s5=st('s5'),s8=st('s8'),s11=st('s11'),s12=st('s12');
+  if(s5)s5.gate=()=>S.fame>=18&&locMax()>=1;if(s8)s8.gate=()=>S.fame>=40&&(hallsEnsure(),(S.expMax|0)>=4);if(s11)s11.gate=()=>S.fame>=70&&locMax()>=2;if(s12&&s12.goal)s12.goal.ok=()=>locMax()>=3;}catch(e){console.warn('halls story',e);}
+try{DLXG.moved=()=>{try{hallsEnsure();return (S.expMax|0)>=1;}catch(_){return false;}};}catch(_){}
+// wings bought later raise the high-water mark too
+setInterval(()=>{try{if(S&&S.exp!=null&&(S.expMax==null||S.exp>S.expMax))S.expMax=S.exp;}catch(_){}},2000);
+
+// ---- older saves: halls you left before this patch come back as empty lots ----
+{const _ls=loadState;loadState=function(d){const r=_ls.apply(this,arguments);try{hallsEnsure();if(!S.hallsMig){S.hallsMig=1;const cur=curHallB();for(let b=0;b<cur;b++)if(!S.bases[b])S.bases[b]=hallEmpty(b);}}catch(e){console.error(e);}return r;};}
+{const _sn=startNewGame;startNewGame=function(){const r=_sn.apply(this,arguments);try{if(S){S.bases={};S.baseHist={};S.hallsMig=1;S.expMax=S.exp|0;S.hallRev=0;}}catch(_){}return r;};}
+
+// ---- the city map marks every hall you own ----
+try{if(typeof cmDraw==='function'){const _cd=cmDraw;cmDraw=function(cv,t){const r=_cd.apply(this,arguments);try{const own=hallsOwned().filter(b=>b!==curHallB());if(!own.length)return r;const x=cv.getContext('2d');
+  const keys=['sump','steam','clock','spire'];
+  for(const b of own){const H=(CM.hit||[]).find(h=>h.k==='d:'+keys[b]);if(!H)continue;const ax=H.x,ay=H.y+18;x.save();x.font='13px VT323, monospace';x.textAlign='center';x.fillStyle='rgba(20,12,4,.85)';x.fillRect(ax-34,ay-9,68,14);x.fillStyle='#ffd84a';x.fillText('🏚 your hall',ax,ay+2);x.restore();}}catch(_){}return r;};}}catch(_){}
+
+// ================= v1.11d · release bookkeeping =================
+try{PATCH.unshift(['v1.11d · YOUR HALLS',[
+ "🏛 Moving no longer costs you your old place. When you move to a new hall, the one you're leaving is saved exactly as you left it: every structure, wall, upgrade and decoration",
+ "🚂 Travel back any time. The new 🏛 Your halls button (and City ▸ More) lists every hall you own, with a live picture of each, its structures, wings and takings, and a Travel here button. Your fighters, staff, beasts, gold and story come with you",
+ "🏚 The halls you're not in stay open with a skeleton crew. Every night each one sends home 40% of its usual takings, after half its upkeep. Halls with 8 or more structures add a little fame too. It's all in the Night Report under Your other halls, and counted in the day's total",
+ "📈 Each hall remembers its last 7 days of takings, so the more you build it up while you're there, the more it sends home while you're away",
+ "🚚 The move screen shows what your current hall will earn once you leave. Nothing is sold any more, so moving only costs the moving fee",
+ "🗺 The Chapter 2 city map marks every hall you own",
+ "📜 Story progress counts the furthest you've moved, so going back down to the Sump never undoes a chapter",
+ "🌟 Legends are a fair draw now. Exxon had her own extra visit timer on top of the normal one, and any guest on the grounds blocked every other legend, so she turned up far too often. Legends now favour whoever you haven't seen for longest, never repeat back to back, and Exxon visits at most once every 6 days",
+ "💡 New lights actually light: red and cold lampposts, candelabras, braziers, steam crystals, glowcaps, glass blooms, the lit signs, shrines and more now glow at night, in their own colours. Clusters of lamps blend into one warm pool instead of washing out",
+ "🎟 Ticket prices grow with you. The cap was 40g × the hall's multiplier and fans judged every price by sewer standards. Now the cap follows what your fans can afford (fame counts much more), the crowd judges a ticket against their own purses, and the price buttons step by 2, 5 or 10 once prices get big",
+ "📜 Quest and request gold scales with the furthest hall you've reached and your fame, so late rewards are worth reading (the reward line shows the real amount)",
+ "📐 New sizes: 91 new decorations in the new 📐 Grand, Colossal & Rows build tab. Grand (3×3) and Colossal (4×4) statues, fountains, obelisks, braziers, crystals and plants; 3-long rows (both directions) of hedges, railings, fences, banners, lampposts, columns, crates and graves; and long 4×2 rugs. Big pieces cost and beautify by size and unlock with a little more fame",
+ "💾 Older saves: halls you moved out of before this patch come back as empty lots (the old moving sale already sold what was there), with the wings you paid for. Build them back up and they'll earn for you too",
+]]);}catch(e){console.warn('v1.11d notes',e);}
+
+// ================= v1.11d · player feedback: fair legends, real light, bigger rewards, bigger (and longer) things =================
+
+// ---------- 1. LEGENDS: a fair draw instead of Exxon every time ----------
+// Before: Exxon had her own 50% timer on top of the normal draw, and any patron on the grounds blocked every other
+// legend, so she crowded everyone out. Now every legend comes through one draw that favours whoever you haven't
+// seen for longest, never repeats the last legend, and Exxon's own timer only fires if she's genuinely due.
+function legLastDay(id){S.legDay=S.legDay||{};return S.legDay[id];}
+function legFairOk(id){try{S.legDay=S.legDay||{};if(S.lastLeg===id)return false;const d=S.legDay[id];if(d!=null&&S.day-d<6)return false;return Math.random()<.1;}catch(_){return false;}}
+function legWeight(P){const d=legLastDay(P.id);const since=d==null?12:Math.min(12,Math.max(0,S.day-d));let w=1+since*since*.35;if(S.lastLeg===P.id)w*=.05;if(P.id==='exxon'){w*=.3;if(d!=null&&S.day-d<6)w=0;}return w;}
+function legPickFair(pool){let tot=0;const ws=pool.map(p=>{const w=legWeight(p);tot+=w;return w;});let r=Math.random()*tot;for(let i=0;i<pool.length;i++){r-=ws[i];if(r<=0)return pool[i];}return pool[pool.length-1];}
+legendPulse=function(dt){legendT-=dt;if(legendT>0||!S)return;legendT=rnd(45,80);
+  if(S.fame<12||!(counts.seat||counts.kitchen))return;
+  const here=visitors.filter(v=>v.patron&&!v.dead&&v.state!=='leave');if(here.length>=2||here.some(v=>{const P=PATRONS.find(p=>p.id===v.patron);return P&&!P.legend;}))return;
+  if(Math.random()>Math.min(.62,.07+S.fame/170))return;
+  const avail=PATRONS.filter(p=>!p.storyNpc&&!visitors.some(v=>v.patron===p.id));const legs=avail.filter(p=>p.legend),plain=avail.filter(p=>!p.legend);
+  const wantLeg=legs.length&&(!plain.length||Math.random()<.7)&&!here.length;const P=wantLeg?legPickFair(legs):plain.length?pick(plain):null;if(P)spawnPatron(P);};
+{const _sp=spawnPatron;spawnPatron=function(P){const n0=visitors.length;const r=_sp.apply(this,arguments);try{if(P&&P.legend&&visitors.length>n0){S.legDay=S.legDay||{};S.legDay[P.id]=S.day;S.lastLeg=P.id;}}catch(_){}return r;};}
+
+// ---------- 2. LIGHTS: every lamp, candle and glowing thing lights the night ----------
+Object.assign(LIGHTS,{d_redlamp:[58,1],d_bluelamp:[58,1],d_candelabra:[42,.85],d_brazier:[56,.95],d_crystal:[46,.8],d_glowshroom:[30,.6],d_glassbloom:[28,.55],d_dynamo:[22,.45],
+  d_sign_bets:[20,.45],d_sign_water:[20,.45],d_sign_blood:[20,.45],d_sign_hope:[20,.45],d_sign_exit:[20,.5],d_shrine:[22,.5],d_steamhorn:[16,.3],d_an_door:[24,.5],d_glassfount:[26,.5],d_orrery:[18,.35]});
+// coloured glow, so a red lamppost looks red and a cold lamppost looks cold
+const LIGHT_COL={d_redlamp:[255,70,60],d_bluelamp:[110,170,255],d_crystal:[80,230,255],d_glowshroom:[190,130,255],d_glassbloom:[150,225,255],d_candelabra:[255,190,90],d_brazier:[255,140,40],
+  d_sign_bets:[255,210,90],d_sign_water:[90,190,255],d_sign_blood:[255,60,60],d_sign_hope:[150,255,150],d_sign_exit:[110,255,140],d_shrine:[255,190,110],d_an_door:[200,120,255],d_glassfount:[120,220,255],torch:[255,150,50],gaslamp:[255,220,140],lantern:[255,120,80],tesla:[120,200,255]};
+const LCSPR={};const lcSpr=c=>{const k=c.join(',');return LCSPR[k]||(LCSPR[k]=mkRad(c[0],c[1],c[2]));};
+{const _gl=getLights;getLights=function(){const fresh=!(lightList&&performance.now()-lightAt<400);const L=_gl.apply(this,arguments);if(fresh){try{
+    for(const e of L){const t=e[4]>=0?objT(e[4]):null;const base=t&&BIGV[t]?BIGV[t].base:t;if(base&&LIGHT_COL[base]&&LIGHTS[t]&&e[2]===LIGHTS[t][0])e[6]=LIGHT_COL[base];}
+    // lamp rows light every lamp in the row, not just the middle one
+    for(let a=0;a<W*H;a++){const t=objT(a);const V=t&&BIGV[t];if(!V||V.kind!=='row'||!LIGHTS[V.base])continue;const[cx,cy]=objCenter(a);for(const[dx,dy]of bigCells(V)){if(!dx&&!dy)continue;const[ix,iy]=iso(cx+dx,cy+dy);L.push([ix,iy-10,LIGHTS[V.base][0],LIGHTS[V.base][1],a,false,LIGHT_COL[V.base]]);}}
+    // merge lights that sit on top of each other, so a cluster of lamps reads as one warm pool instead of a white-out
+    const out=[];for(const e of L){const m=out.find(o=>Math.hypot(o[0]-e[0],o[1]-e[1])<14);if(m){m[2]=Math.min(140,Math.max(m[2],e[2])+4);m[3]=Math.min(1,Math.max(m[3],e[3]));if(!m[6]&&e[6])m[6]=e[6];}else out.push(e);}
+    L.length=0;for(const e of out)L.push(e);
+  }catch(e){console.error(e);}}return L;};}
+{const _dl=drawLighting;drawLighting=function(){_dl.apply(this,arguments);try{const d=darkness();if(d<=.05)return;const L=getLights();const s=cam.z*dpr;
+  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.globalCompositeOperation='lighter';const a0=Math.min(.16,.26*d);
+  for(const e of L){const c=e[6];if(!c)continue;const X=(e[0]-cam.x)*s,Y=(e[1]-cam.y)*s,R=e[2]*s*.6;if(X<-R||Y<-R||X>cv.width+R||Y>cv.height+R)continue;ctx.globalAlpha=a0*e[3]*(.92+.08*Math.sin(gt*4+e[4]));ctx.drawImage(lcSpr(c),X-R,Y-R,R*2,R*2);}
+  ctx.restore();}catch(_){}};}
+
+// ---------- 3. REWARDS that keep up with you ----------
+// Ticket prices used to stop at 40g × the hall's multiplier, and the crowd judged any price by sewer standards.
+// Now fans judge a ticket against what they can afford at your fame and hall, and the cap grows with you.
+let _tkC=null,_tkT=0;
+function tkScale(){const n=performance.now();if(_tkC!=null&&n-_tkT<1000)return _tkC;_tkT=n;let v=1;try{v=Math.max(1,willBase()/22);}catch(_){}return _tkC=v;}
+function tkCap(){let c=40;try{c=Math.max(Math.round(40*locMul()),Math.round(willBase()*1.6));}catch(_){}const st=c>=200?10:c>=100?5:c>=60?2:1;return Math.ceil(c/st)*st;}
+function tkStep(){const c=tkCap();return c>=200?10:c>=100?5:c>=60?2:1;}
+// quest and request gold grows with the furthest hall you've reached and your fame
+function rwMul(){try{const lm=LOCS[typeof locMax==='function'?locMax():locOf()].mul;return Math.round((1+(lm-1)*.5+Math.min(1.5,(S.fame||0)/300))*100)/100;}catch(_){return 1;}}
+// keep a ticket that's now off-step tidy
+setInterval(()=>{try{if(S&&S.ticket>tkCap())S.ticket=tkCap();}catch(_){}},3000);
+
+// ---------- 4. SIZES: grand, colossal and row versions of the decorations ----------
+// Every decoration used to be 1×1 or 2×2. Now monuments, lights and plants come in 3×3 Grand and 4×4 Colossal,
+// and fences, hedges, banners, lampposts, columns and crates come as 3-long rows (east–west or north–south).
+const BIGV={};
+const BIG_GRAND=['d_glassbloom','d_glowshroom','d_deadtree','d_cactus','d_brazier','d_crystal','d_candelabra','d_obelisk','d_gargoyle','d_totem','d_runestone','d_gong','d_grandclock','d_bell','d_shrine','d_col_marble','d_col_brass','d_birdbath','d_telescope','d_globe','d_orrery','d_st_fighter','d_st_angel','d_st_eye','d_st_beast','d_st_broken','d_fountain','d_glassfount','d_well','d_dynamo','d_organpipes','d_steamhorn'];
+const BIG_COLOSSAL=['d_st_fighter','d_st_angel','d_st_eye','d_st_beast','d_fountain','d_glassfount','d_obelisk','d_gargoyle','d_crystal'];
+const BIG_ROW=['d_hedge','d_railing','d_glassfence','d_spikes','d_rope','d_crates','d_jugs','d_ban_red','d_ban_blue','d_ban_green','d_ban_black','d_ban_gold','d_redlamp','d_bluelamp','d_col_marble','d_col_ivy','d_swords','d_spears','d_tomb','d_sign_exit'];
+const BIG_RUG=['d_rug_red','d_rug_check','d_rug_ring','d_rug_eye','d_rug_green'];
+function bigCells(V){const T0=T;if(V.kind!=='row')return [[0,0]];const out=[];const n=V.n,bs=V.bfp*T0;for(let i=0;i<n;i++){const o=(i-(n-1)/2)*bs;out.push(V.ax==='x'?[o,0]:[0,o]);}return out;}
+function bigMake(base,key,name,fp,kind,extra){const B=OBJ[base];if(!B||OBJ[key])return;const bf=B.fp[0];const area=(fp[0]*fp[1])/(B.fp[0]*B.fp[1]);
+  OBJ[key]=Object.assign({},B,{name,fp:fp.slice(),cost:Math.round(B.cost*area*.85),_b:Math.round((B._b!=null?B._b:B.cost)*area*.85),beauty:Math.round(B.beauty*Math.pow(area,.8)*10)/10,r:Math.round((B.r||6)*Math.sqrt(area))},extra||{});
+  const fame=((B.unlock&&B.unlock.fame)||0)+(kind==='colossal'?40:kind==='grand'?15:5);OBJ[key].unlock={fame};
+  BIGV[key]=Object.assign({base,kind,bfp:bf},kind==='row'||kind==='rug'?{kind:'row',n:Math.max(fp[0],fp[1])/bf,ax:fp[0]>=fp[1]?'x':'y'}:{k:Math.min(fp[0],fp[1])/bf*(kind==='colossal'?.92:.9)});
+  try{if(MODEL[base]){MODEL[key]=MODEL[base];if(typeof MODEL2!=='undefined')MODEL2[key]=MODEL[base];}}catch(_){}
+  if(LIGHTS[base]){const L=LIGHTS[base];LIGHTS[key]=kind==='row'?L.slice():[Math.round(L[0]*(kind==='colossal'?1.9:1.5)),L[1]];}
+  (CATS.sizes=CATS.sizes||[]).push(key);}
+for(const k of BIG_GRAND)if(OBJ[k])bigMake(k,k+'_g','Grand '+OBJ[k].name,[3,3],'grand');
+for(const k of BIG_COLOSSAL)if(OBJ[k])bigMake(k,k+'_c','Colossal '+OBJ[k].name,[4,4],'colossal');
+for(const k of BIG_ROW)if(OBJ[k]&&OBJ[k].fp[0]===1){const n=OBJ[k].name.replace(/^(Iron |Glass |Sand)/,'$1');bigMake(k,k+'_rx',n+' Row (↘)',[3,1],'row');bigMake(k,k+'_ry',n+' Row (↙)',[1,3],'row');}
+for(const k of BIG_RUG)if(OBJ[k]&&OBJ[k].fp[0]===2){bigMake(k,k+'_lx','Long '+OBJ[k].name+' (↘)',[4,2],'rug');bigMake(k,k+'_ly','Long '+OBJ[k].name+' (↙)',[2,4],'rug');}
+try{if(!CAT_L.some(x=>x[0]==='sizes')){const at=CAT_L.findIndex(x=>x[0]==='oddities');CAT_L.splice(at>=0?at+1:CAT_L.length,0,['sizes','📐 Grand, Colossal & Rows']);}}catch(e){console.error(e);}
+try{if(typeof iconCache!=='undefined')for(const k in BIGV)delete iconCache[k];}catch(_){}
+// draw: grand and colossal pieces are the original, scaled up around their centre; rows repeat it along the line
+let BIG_DRAWING=0;
+{const _doa=drawObjAt;drawObjAt=function(t,a,cx,cy,seed){const V=BIGV[t];if(!V||BIG_DRAWING)return _doa.apply(this,arguments);BIG_DRAWING++;try{
+  if(V.kind==='row'){const cells=bigCells(V).slice().sort((p,q)=>(p[0]+p[1])-(q[0]+q[1]));let i=0;for(const[dx,dy]of cells)_doa.call(this,V.base,a,cx+dx,cy+dy,(seed||0)+(i++)*7);}
+  else{const[ix,iy]=iso(cx,cy);ctx.save();ctx.translate(ix,iy);ctx.scale(V.k,V.k);ctx.translate(-ix,-iy);try{_doa.call(this,V.base,a,cx,cy,seed);}finally{ctx.restore();}}
+  }finally{BIG_DRAWING--;}};}
+// ruins and scaffolds of big pieces use the big footprint
+try{if(typeof FARCOL!=='undefined')for(const k in BIGV)if(FARCOL[BIGV[k].base])FARCOL[k]=FARCOL[BIGV[k].base];}catch(_){}
+try{applyEcon();}catch(_){}
 
 </script>
 </body>
