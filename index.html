@@ -376,7 +376,7 @@ img.pxi,#dlg img.pxi,.tool img.pxi,.card img.pxi,.chip img.pxi,.frow img.pxi,.lo
 </div>
 <script>
 'use strict';
-const VERSION='v1.14f';const DAY_RATE=1/1.5; // days last 1.5x longer (v1.09c)
+const VERSION='v1.14g';const DAY_RATE=1/1.5; // days last 1.5x longer (v1.09c)
 // (The app's updater reads the version from the line above. Keep it the first line of the script.)
 // ================= HOW THIS FILE IS LAID OUT =================
 // One script. It is ordered by history: the base game first, then each update's additions in release order, then the
@@ -965,15 +965,18 @@ function save(){
   try{if(S&&S._t){const key=SK(SLOT);if(localStorage.getItem(key+'_t')!==String(S._t)){localStorage.setItem(key+'_z',packSave());localStorage.setItem(key+'_zt',String(S._t));if(!_saveWarn){_saveWarn=1;toast('⚠ Storage is nearly full. Your game was saved in compact form.',4500);}}else if(localStorage.getItem(key+'_z'))localStorage.removeItem(key+'_z'),localStorage.removeItem(key+'_zt');}}catch(e){if(!_saveWarn){_saveWarn=1;try{toast('⚠ This browser refused to save. Try clearing space or export a backup.',5000);}catch(_){__sw(_)}}}
   return r;
 }
-function saveCore(){if(uiBlock&&!S.player)return;const t=Date.now();S._t=t;try{localStorage.setItem(SK(SLOT),JSON.stringify(S));localStorage.setItem(SK(SLOT)+'_t',String(t));}catch(e){__sw(e)}
-  cloudDirty=true;}
+// v1.14g: the blank colosseum that sits behind the title menu is not a game. Until v1.14g, hiding the tab or closing the page
+// while the title was up (which is exactly what an app update does) saved that blank Day 1 over the player's current slot.
+const blankAtTitle=()=>{try{return typeof menuOpen!=='undefined'&&menuOpen&&!!window.__blankS&&S===window.__blankS;}catch(_){return false;}};
+function saveCore(){if(blankAtTitle())return;if(uiBlock&&!S.player)return;const t=Date.now();S._t=t;try{localStorage.setItem(SK(SLOT),JSON.stringify(S));localStorage.setItem(SK(SLOT)+'_t',String(t));}catch(e){__sw(e)}
+  cloudDirty=true;try{VAULT.soon();}catch(_){}}
 // ---- cloud save: one private save per player, follows you to any browser signed in to Claude ----
 let cloudRef=null,cloudBusy=false,cloudDirty=false,cloudLastAt=0,cloudLast='',cloudState='off';
 const rle=a=>{const o=[];let p,n=0;for(const v of a){if(n&&v===p)n++;else{if(n)o.push([p,n]);p=v;n=1;}}if(n)o.push([p,n]);return o;};
 const unrle=r=>{const o=[];for(const[v,n]of r)for(let i=0;i<n;i++)o.push(v);return o;};
 function packSave(){const d=Object.assign({},S,{ground:rle(S.ground),objs:rle(S.objs),ceil:rle(S.ceil||[])});return JSON.stringify(d);}
 function unpackSave(str){const d=JSON.parse(str);d.ground=unrle(d.ground);d.objs=unrle(d.objs);d.ceil=unrle(d.ceil);if(d.ceil.length!==W*H)d.ceil=new Array(W*H).fill(null);return d;}
-function pushCloud(force){if(!cloudRef||cloudBusy)return;const now=Date.now();if(!force&&now-cloudLastAt<15000)return;let str;try{str=packSave();}catch(e){return;}if(str===cloudLast){cloudDirty=false;return;}
+function pushCloud(force){if(!cloudRef||cloudBusy)return;if(blankAtTitle())return;const now=Date.now();if(!force&&now-cloudLastAt<15000)return;let str;try{str=packSave();}catch(e){return;}if(str===cloudLast){cloudDirty=false;return;}
   cloudBusy=true;cloudLastAt=now;cloudDirty=false;cloudRef.set({t:S._t||now,v:3,s:str}).then(()=>{cloudLast=str;cloudState='ok';}).catch(e=>{cloudState=e&&e.code==='quota_exceeded'?'full':'err';}).finally(()=>{cloudBusy=false;});}
 async function cloudInit(){try{if(!window.claude||!window.claude.use)return;const[db,user]=await Promise.all([claude.use('db'),claude.use('user')]);if(!db||!user)return;const id=await user.id();if(!id)return;
   const ref=db.doc('data/users/'+id+'/save');const snap=await Promise.race([ref.get(),new Promise(r=>setTimeout(()=>r(null),10000))]);if(!snap)return;cloudRef=ref;cloudState='ok';
@@ -2962,7 +2965,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-menu]');if
   else if(m==='dbg'){openModal('debug');return;}
   else if(m==='newslot'){if(slotMeta(n)&&newSlotPick!==n){newSlotPick=n;}else{startNewGame(n);return;}}
   else if(m==='newgo'){startNewGame(n);return;}
-  else if(m==='del'){if(hdOK('Delete slot '+n+'? This cannot be undone.',()=>b.click(),'Delete it')){try{localStorage.removeItem(SK(n));localStorage.removeItem(SK(n)+'_t');localStorage.removeItem(SK(n)+'_bak');localStorage.removeItem(SK(n)+'_bak_t');localStorage.removeItem(n===1?'sog_ckpt':'sog_ckpt'+n);}catch(_){__sw(_)}const d=cloudDoc(n);if(d)d.delete().catch(()=>{});delete cloudSlots[n];}}
+  else if(m==='del'){if(hdOK('Delete slot '+n+'? This cannot be undone.',()=>b.click(),'Delete it')){try{localStorage.removeItem(SK(n));localStorage.removeItem(SK(n)+'_t');localStorage.removeItem(SK(n)+'_bak');localStorage.removeItem(SK(n)+'_bak_t');localStorage.removeItem(n===1?'sog_ckpt':'sog_ckpt'+n);}catch(_){__sw(_)}try{VAULT.del(n);}catch(_){__sw(_)}const d=cloudDoc(n);if(d)d.delete().catch(()=>{});delete cloudSlots[n];}}
   else if(m==='cont'){continueSlot(n);return;}
   renderMenu();});
 function continueSlot(n){setTrack('game');const m=slotMeta(n);if(!m)return;useSlot(n);const st=m.d;hideMenu();uiBlock=false;resetWorld();bootFrom(st);S._t=m.t;fitCam();if(m.src==='cloud'){cloudLast=cloudSlots[n].s;}save();renderPanel();
@@ -6364,6 +6367,7 @@ function bootFrom(d){
   let fix=[],old='';try{if(d){old=d._built||'';fix=saveCheck(d);}}catch(e){console.warn(e);}   // repair and migrate the save
   let goldFix=null;try{if(d){const bad=!goodNum(d.gold);goldFix=numRepair(d);if(!bad)goldFix=null;}}catch(_){__sw(_)}
   bootCore(d);
+  try{window.__blankS=fresh?S:null;}catch(_){__sw(_)}   // the title-screen blank is never saved (see saveCore)
   // --- after the core (innermost first)
   try{_gS=null;numGuard();
     if(goldFix!=null)setTimeout(()=>{try{toast(`🩹 This save's gold was broken by a bug. Restored to ${goldFix.toLocaleString()}g.`,6000);save();}catch(_){__sw(_)}},2500);}catch(_){__sw(_)}
@@ -24197,7 +24201,7 @@ function eraseAsk(n){const m=slotMeta(n);if(!m)return;let el=document.getElement
   const up=()=>{if(!t0)return;t0=0;cancelAnimationFrame(raf);bar.style.width='0';};
   h.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();try{h.setPointerCapture(ev.pointerId);}catch(_){__sw(_)}t0=performance.now();step();try{tone(110,.3,'sawtooth',.05);}catch(_){__sw(_)}});h.addEventListener('pointerup',up);h.addEventListener('pointercancel',up);h.addEventListener('pointerleave',up);
   el.querySelector('.keep').addEventListener('click',ev=>{ev.stopPropagation();el.remove();});el.addEventListener('click',ev=>ev.stopPropagation());}
-function doErase(n){try{for(const k of[SK(n),SK(n)+'_t',SK(n)+'_bak',SK(n)+'_bak_t',n===1?'sog_ckpt':'sog_ckpt'+n])localStorage.removeItem(k);}catch(_){__sw(_)}try{const d=cloudDoc(n);if(d)d.delete().catch(()=>{});}catch(_){__sw(_)}try{delete cloudSlots[n];}catch(_){__sw(_)}
+function doErase(n){try{VAULT.del(n);}catch(_){__sw(_)}try{for(const k of[SK(n),SK(n)+'_t',SK(n)+'_bak',SK(n)+'_bak_t',n===1?'sog_ckpt':'sog_ckpt'+n])localStorage.removeItem(k);}catch(_){__sw(_)}try{const d=cloudDoc(n);if(d)d.delete().catch(()=>{});}catch(_){__sw(_)}try{delete cloudSlots[n];}catch(_){__sw(_)}
   try{noise(.8,.4,300,'lowpass');play('boom');}catch(_){__sw(_)}toast(`🔥 Slot ${n} erased.`,3000);const left=[1,2,3].some(k=>slotMeta(k));menuView=left?'load':'main';try{if(typeof MN!=='undefined')MN.scene=null;}catch(_){__sw(_)}renderMenu();}
 // ---------- booting a Tinkerworks session in its own slot (never touches your saves) ----------
 function tkBoot(st,mode){let prev=null;try{prev=localStorage.getItem('sog_slot');}catch(_){__sw(_)}useSlot(9);try{if(prev)localStorage.setItem('sog_slot',prev);else localStorage.removeItem('sog_slot');}catch(_){__sw(_)}
@@ -33696,6 +33700,7 @@ try{PATCH.unshift(['v1.14a · IN HAND',["🤲 Cutscene props are held properly n
 try{PATCH.unshift(['v1.14b · A BETTER GRIP',["🔄 Cutscene props turn. A held prop rests at a natural angle and moves with its holder: swung for a blow, swept for raking, lifted for a cheer or a toast, dipped for a bow, shaken for a laugh, raised to the mouth to eat or drink, swaying on a walk", "🧱 On the ground, tall props lean on the wall at the edge of the stage, lie flat where they're put down, spin when thrown and tumble when they fall", "🌒 Main menu: a soft shade and a deeper shadow sit behind the ICARUS logo, so signs and pipes in the scene behind no longer run into it"]]);}catch(e){console.error(e);}
 
 try{PATCH.unshift(['v1.14c · BOTH HANDS',["🖐 Cutscene props: someone carrying two things holds one in each hand, and a tool at their side stays planted while they point or wave with the free hand", "🍖 Only food and drink are lifted to the mouth. Tullus no longer swings the rake at the floor when he smells the sand", "👣 Small props put down where someone is standing sit at their feet in front of them instead of hiding behind them", "🍂 Blankets, papers and rags flutter down instead of dropping like a brick, and things land with their own sound: coins, metal, paper, wet", "✨ A glowing prop still glows while it is being held", "🎨 Redrawn: sand (a pile, not an hourglass), the lift chain, the lantern, the gladius, the forms, the jug, the scrip bundle, the oilcloth wrap and the three suns. Marcia holds the tin crown in her hands, as the line says"]]);}catch(e){console.error(e);}
+try{PATCH.unshift(['v1.14g · THE VAULT',["🛑 Fixed the save wipe: closing the game, switching away, or an app update restarting it while the title screen was up saved a blank Day 1 game over your current slot. The title screen never saves now", "🩹 If a slot was already blanked that way, the game puts it back from that slot's start-of-week checkpoint the next time it opens", "🗄 Your saves now keep a second copy outside the usual slot storage, updated every time the game saves. If an update or a cleared browser ever leaves the slots empty, the game puts them back on its own when it starts", "🛡 A slot that is still there is never touched by this. Deleting a slot deletes its copy too", "📱 On Android the copy can also live in the app's own files, once the app adds the vault functions"]]);}catch(e){console.error(e);}
 try{PATCH.unshift(['v1.14f · OWNERS DO BLEED',["⚔ Fixed: the solo story fights would not start ('s.solo is not a function'): You vs the Thugs and You vs Grindle in Owners Don't Bleed, and Shawna's two bouts in The Strongest Opponent"]]);}catch(e){console.error(e);}
 try{PATCH.unshift(['v1.14e · ROOM AT THE LIFT',["🤝 At the Drain Street lift, Tullus stops a step short of Marcia, so the scrip and the gladius can be seen changing hands", "💾 Fixed: the game could not save while the tutorial's 'Watch it play out' step was open (the step kept the live bout inside the save)", "🧱 Fixed: moving up to Drain Street (or expanding) could leave invisible leftovers of a building that sat across the new wall. They blocked those tiles, and building on top of one stopped fans and fighters finding their way", "💾 Fixed: picking your arena school at level 3, and fitting, removing or resting at the ripperdoc, did not save straight away"]]);}catch(e){console.error(e);}
 try{PATCH.unshift(['v1.14d · THE SUMP\'S OWN THINGS',["🎨 Every cutscene prop is redrawn in the Sump's colours: rust, verdigris, tallow, grimy cloth, patched canvas. Papers are creased and sealed, tools are rusted and wrapped, the blanket is patched canvas instead of a red brick", "🤝 Props are handed over. When the scrip and the gladius change hands at the lift, they travel from one hand to the other and the two turn to face each other", "🔨 You hold a hammer while you nail the boards in the first scene, and put it down when Tullus walks in", "🚰 The tap, the valve and the lift chain are on the wall now, not on the floor", "⚙ Used props answer in their own way: the valve turns, grates and chains rattle, planks wobble, ledgers and papers flip", "💧 More props move on their own: coins glint, puddles ripple, the tap drips, the banner stirs, stew steams, the automaton blinks", "☁ The zepp and the three suns sit lower so the caption no longer covers them"]]);}catch(e){console.error(e);}
@@ -33733,6 +33738,61 @@ function updateToasts(){const L=(typeof UPDATE_TOASTS!=='undefined'&&UPDATE_TOAS
     el.addEventListener('pointerdown',e=>{y0=e.clientY;});
     el.addEventListener('pointerup',e=>{if(gone)return;if(y0!=null&&y0-e.clientY>18){clearTimeout(tm);next();return;}clearTimeout(tm);gone=true;UPD_T.run++;el.remove();try{showWhatsNew(true);}catch(_){__sw(_)}});};
   setTimeout(show,700);}
+
+// ================= v1.14g · THE VAULT: saves that outlive an update =================
+// The slots live in localStorage. If that is ever found empty (an app update that reloads the game from a new place, a browser
+// that cleared it), the game used to see a first-time player. Now every save is also copied, as it happens, to two other places:
+//   1. IndexedDB in the same browser or WebView (a separate store from localStorage)
+//   2. the Android app's own files, if the app offers IcarusAndroid.vaultPut(name,text) / vaultGet(name) / vaultDel(name)
+// On start, any slot that is missing from localStorage is put back from the newest copy. A slot that is present is never touched.
+// Deleting a slot in the menu deletes its copies too, so a deleted game does not come back.
+const VAULT=(()=>{
+  const META=['sog_slot','sog_settings','sog_wn','sog_wn2','sog_pn','sog_tk_best','sog_tink'];
+  const ckK=n=>n===1?'sog_ckpt':'sog_ckpt'+n;
+  const app=()=>{try{const a=window.IcarusAndroid;return a&&typeof a.vaultPut==='function'&&typeof a.vaultGet==='function'?a:null;}catch(_){return null;}};
+  const st={idb:'?',app:'off',restored:0,from:'',pushed:0,persist:null,ready:false};
+  let dbP=null;const sent={};let soonT=0,asked=false;
+  const idb=()=>dbP||(dbP=new Promise(res=>{try{const r=indexedDB.open('icarus_sog_vault',1);r.onupgradeneeded=()=>{try{r.result.createObjectStore('kv');}catch(_){__sw(_)}};
+    r.onsuccess=()=>{st.idb='on';res(r.result);};r.onerror=()=>{st.idb='off';res(null);};r.onblocked=()=>{st.idb='off';res(null);};}catch(_){st.idb='off';res(null);}}));
+  const tx=(mode,fn)=>idb().then(db=>new Promise(res=>{if(!db)return res(null);try{const t=db.transaction('kv',mode);const q=fn(t.objectStore('kv'));t.oncomplete=()=>res(q&&q.result!==undefined?q.result:null);t.onerror=t.onabort=()=>res(null);}catch(_){res(null);}}));
+  const iGet=k=>tx('readonly',o=>o.get(k)),iPut=(k,v)=>tx('readwrite',o=>o.put(v,k)),iDel=k=>tx('readwrite',o=>o.delete(k));
+  const aGet=k=>{const a=app();if(!a)return null;try{const v=a.vaultGet(k);return typeof v==='string'&&v?v:null;}catch(_){return null;}};
+  const aPut=(k,v)=>{const a=app();if(!a)return;try{a.vaultPut(k,v);st.app='on';}catch(e){st.app='err';__sw(e);}};
+  const rec=n=>{let save=null;try{save=localStorage.getItem(SK(n));}catch(_){return null;}if(save==null||save==='')return null;
+    return {game:'icarus-sog',kind:'vault',slot:n,t:+localStorage.getItem(SK(n)+'_t')||0,ver:VERSION,save,ckpt:localStorage.getItem(ckK(n))};};
+  const push=n=>{const r=rec(n);if(!r)return;const sig=r.t+':'+r.save.length+':'+(r.ckpt?r.ckpt.length:0);if(sent[n]===sig)return;sent[n]=sig;const txt=JSON.stringify(r);aPut('slot'+n,txt);iPut('slot'+n,txt);st.pushed++;};
+  const pushMeta=()=>{const o={};try{for(const k of META){const v=localStorage.getItem(k);if(v!=null)o[k]=v;}}catch(_){return;}const txt=JSON.stringify(o);if(sent.meta===txt)return;sent.meta=txt;aPut('meta',txt);iPut('meta',txt);};
+  const sync=()=>{if(!st.ready)return;try{for(const n of[1,2,3])push(n);pushMeta();}catch(e){__sw(e)}};
+  const soon=()=>{if(!asked){asked=true;try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().then(p=>{st.persist=!!p;}).catch(()=>{});}catch(_){__sw(_)}}
+    clearTimeout(soonT);soonT=setTimeout(sync,1500);};
+  const del=n=>{delete sent[n];const a=app();try{if(a){if(typeof a.vaultDel==='function')a.vaultDel('slot'+n);else a.vaultPut('slot'+n,'');}}catch(e){__sw(e)}iDel('slot'+n);};
+  const parse=t=>{try{const r=JSON.parse(t);return r&&typeof r.save==='string'&&r.save?r:null;}catch(_){return null;}};
+  // put back what is missing; never write over a slot that is there
+  const putBack=(get,label)=>{let n=0;for(const s of[1,2,3]){let have=null;try{have=localStorage.getItem(SK(s));}catch(_){return 0;}if(have!=null&&have!=='')continue;const r=parse(get('slot'+s));if(!r)continue;
+      try{localStorage.setItem(SK(s),r.save);localStorage.setItem(SK(s)+'_t',String(r.t||Date.now()));if(r.ckpt)localStorage.setItem(ckK(s),r.ckpt);n++;}catch(e){__sw(e)}}
+    try{const m=JSON.parse(get('meta')||'null');if(m)for(const k of META)if(m[k]!=null&&localStorage.getItem(k)==null)localStorage.setItem(k,m[k]);}catch(_){__sw(_)}
+    if(n){st.restored+=n;st.from=st.from?st.from+'+'+label:label;}return n;};
+  const tell=()=>{if(!st.restored)return;try{if(typeof menuOpen!=='undefined'&&menuOpen)renderMenu();}catch(_){__sw(_)}
+    setTimeout(()=>{try{toast('🗄 '+st.restored+' saved game'+(st.restored>1?'s':'')+' put back after the update. Nothing was lost.',6000);}catch(_){__sw(_)}},1200);};
+  const boot=()=>{let n=0;
+    try{if(app()){st.app='on';n+=putBack(aGet,'app');}}catch(e){__sw(e)}
+    Promise.all(['slot1','slot2','slot3','meta'].map(k=>iGet(k).then(v=>[k,v]))).then(L=>{const M={};for(const[k,v]of L)M[k]=typeof v==='string'?v:null;n+=putBack(k=>M[k],'browser');})
+      .catch(e=>__sw(e)).then(()=>{st.ready=true;tell();sync();});
+    setInterval(sync,20000);
+    const flush=()=>{try{sync();}catch(_){__sw(_)}};
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush();});window.addEventListener('pagehide',flush);};
+  return {boot,soon,sync,del,status:()=>Object.assign({},st)};
+})();
+window.icarusVault=()=>VAULT.status();
+// A slot that the old bug blanked still has its start-of-week checkpoint beside it. Put that back, once, before anything else.
+function rescueBlankSlots(){let n=0;for(const s of[1,2,3]){try{const raw=localStorage.getItem(SK(s));if(!raw)continue;const d=JSON.parse(raw);
+    if(!(d&&d.day===1&&!d.introDone&&d.player&&!d.player.name&&!(d.roster&&d.roster.length>1)))continue;
+    const ck=localStorage.getItem(s===1?'sog_ckpt':'sog_ckpt'+s);if(!ck)continue;const st=unpackSave(ck);
+    if(!(st&&Array.isArray(st.roster)&&Array.isArray(st.ground)&&st.ground.length===W*H&&(st.day>1||st.introDone)))continue;delete st.over;
+    localStorage.setItem(SK(s)+'_bak',raw);localStorage.setItem(SK(s),JSON.stringify(st));localStorage.setItem(SK(s)+'_t',String(Date.now()));n++;
+    setTimeout(()=>{try{toast('🩹 Slot '+s+' had been blanked by an old bug. It is back from the start of week '+((st.corp&&st.corp.week)||1)+', day '+st.day+'.',8000);}catch(_){__sw(_)}},2200+n*400);}catch(e){__sw(e)}}return n;}
+try{rescueBlankSlots();}catch(e){__sw(e)}
+try{VAULT.boot();}catch(e){__sw(e)}
 
 // ================= BOOT (always the last thing in the script) =================
 applyPC();bootFrom(null);SKnoGob();fitCam();loopOn=true;requestAnimationFrame(frame);showMenu();menuBgLoop();
